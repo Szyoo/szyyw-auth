@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "szyyw-auth"
+version = "0.1.0"
+description = "SSO client for *.szyyw.xyz apps — trust X-User / X-Role injected by the Caddy gate"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+flask = ["flask>=2"]
+starlette = ["starlette>=0.27"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["szyyw_auth*"]
