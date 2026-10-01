@@ -1,6 +1,6 @@
 """Starlette / FastAPI adapter.
 
-    from szyyw_auth.starlette import require_identity, require_admin
+    from szyyw_auth.starlette import require_identity, require_admin, optional_identity
     @app.get("/x")
     def x(ident: Identity = Depends(require_identity)): ...
 """
@@ -11,7 +11,7 @@ from typing import Optional
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
-from . import Identity, identity_from_headers, sso_enabled
+from . import Identity, identity_from_headers, is_anonymous as _is_anonymous, sso_enabled
 
 _MISSING = object()
 
@@ -25,6 +25,16 @@ def current_identity(request: Request) -> Optional[Identity]:
         cached = identity_from_headers(request.headers.get)
         request.scope["szyyw_identity"] = cached
     return cached
+
+
+def is_anonymous(request: Request) -> bool:
+    """True for an anonymous visitor (X-Portal-Anon: 1, no identity). False when SSO is off."""
+    return sso_enabled() and _is_anonymous(request.headers.get)
+
+
+def optional_identity(request: Request) -> Optional[Identity]:
+    """Dependency: identity or None, never rejects. `Depends(optional_identity)`."""
+    return current_identity(request)
 
 
 def require_identity(request: Request) -> Identity:

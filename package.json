@@ -1,6 +1,6 @@
 {
   "name": "@szyyw/auth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SSO client for *.szyyw.xyz apps — trust X-User / X-Role injected by the Caddy gate",
   "type": "module",
   "license": "MIT",
@@ -10,5 +10,6 @@
     "./express": { "types": "./express.d.ts", "default": "./express.js" },
     "./next": { "types": "./next.d.ts", "default": "./next.js" }
   },
+  "scripts": { "test": "node --test test/*.test.js" },
   "files": ["index.js", "index.d.ts", "express.js", "express.d.ts", "next.js", "next.d.ts"]
 }

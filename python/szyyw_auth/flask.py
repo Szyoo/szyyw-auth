@@ -6,7 +6,7 @@ from typing import Optional
 
 from flask import abort, g, request
 
-from . import Identity, identity_from_headers, sso_enabled
+from . import Identity, identity_from_headers, is_anonymous as _is_anonymous, sso_enabled
 
 
 def current_identity() -> Optional[Identity]:
@@ -16,6 +16,22 @@ def current_identity() -> Optional[Identity]:
     if not hasattr(g, "_szyyw_identity"):
         g._szyyw_identity = identity_from_headers(request.headers.get)
     return g._szyyw_identity
+
+
+def is_anonymous() -> bool:
+    """True for an anonymous visitor (X-Portal-Anon: 1, no identity). False when SSO is off."""
+    return sso_enabled() and _is_anonymous(request.headers.get)
+
+
+def optional_identity(fn):
+    """Decorator: never rejects. Sets `flask.g.identity` to the Identity or None, then calls fn."""
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        g.identity = current_identity()
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 def require_identity(role: Optional[str] = None):
