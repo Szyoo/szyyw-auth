@@ -14,6 +14,8 @@
 
 **安全前提**：这些头可信，仅因为应用容器**只有 Caddy 能访问**（compose 里没有 `ports:`，只挂 `ingress` 网络）。任何能绕过 Caddy 直连应用的路径都会让头伪造成为可能——不要给应用发布端口。
 
+**门卫侧的义务**（契约的另一半，在 `szyyw-platform` 的 Caddyfile `(sso)` 片段里实现）：对**每一个**到达应用的请求先剥掉客户端自带的 `X-User` / `X-Role` / `X-Portal-Sub`，再由 `forward_auth` 给受门卫的请求写入真实值。绕过门卫的请求（带 `Authorization`、健康端点、机器路径）因此到达应用时**没有**身份头——应用对它们只认自己的 token。没有这一步，任何人用 `-H 'Authorization: x' -H 'X-User: admin'` 就能冒充管理员。
+
 **开关**：`SZYYW_SSO=1` 才启用。未设置时所有函数返回 `None`/拒绝，本地开发继续用应用自己的登录。
 
 **机器端点**（cron、agent、webhook、推送）不走门卫：Caddy 对带 `Authorization` 头或在排除路径上的请求直接放行，应用照旧自己验 token。
