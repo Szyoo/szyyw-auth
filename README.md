@@ -21,6 +21,8 @@
 
 **开关**：`SZYYW_SSO=1` 才启用。未设置时所有函数返回 `None`/拒绝，本地开发继续用应用自己的登录。
 
+**匿名站点**：站点允许匿名访问时，门卫对未登录访客放行并注入 `X-Portal-Anon: 1`；应用用 `optional_identity` / `optionalIdentity()` 读取「身份或空」，要求登录的路由仍用 `require_identity`（匿名 → 401）。
+
 **机器端点**（cron、agent、webhook、推送）不走门卫：Caddy 对带 `Authorization` 头或在排除路径上的请求直接放行，应用照旧自己验 token。
 
 ## 安装
@@ -44,27 +46,36 @@ from szyyw_auth.flask import current_identity, require_identity, optional_identi
 def me():
     ident = current_identity()
     return {"user": ident.user, "role": ident.role}
+
+@app.get("/feed")
+@optional_identity             # 不拒绝：flask.g.identity = Identity 或 None（匿名/未登录）
+def feed():
+    if g.identity is None: ...  # is_anonymous() 区分匿名访客
 ```
 
 ```python
 # FastAPI
 from fastapi import Depends
 from szyyw_auth import Identity
-from szyyw_auth.starlette import require_identity, require_admin
+from szyyw_auth.starlette import require_identity, require_admin, optional_identity
 
 @app.get("/me")
 def me(ident: Identity = Depends(require_identity)): ...
+
+@app.get("/feed")
+def feed(ident: Identity | None = Depends(optional_identity)): ...   # 不拒绝，匿名 → None
 ```
 
 ```js
 // Express
-import { requireIdentity } from '@szyyw/auth/express';
+import { requireIdentity, optionalIdentity, isAnonymous } from '@szyyw/auth/express';
 app.get('/api/me', requireIdentity(), (req, res) => res.json(req.identity));
+app.get('/api/feed', optionalIdentity(), (req, res) => res.json({ me: req.identity }));   // 不拒绝，匿名 → null；isAnonymous(req) 区分匿名
 
 // Next (route handler / server component)
 import { headers } from 'next/headers';
-import { identityFromRequestHeaders } from '@szyyw/auth/next';
-const ident = identityFromRequestHeaders(await headers());   // null → treat as logged out
+import { identityFromRequestHeaders, isAnonymousFromRequestHeaders } from '@szyyw/auth/next';
+const ident = identityFromRequestHeaders(await headers());   // null → treat as logged out（匿名也是 null；isAnonymousFromRequestHeaders 区分；optionalIdentity 是同一函数的别名）
 ```
 
 未登录的浏览器导航该去哪：`login_url(portal, return_to)` / `loginUrl(portal, returnTo)` 生成 portal 登录地址（带 `?rd=`，登完跳回）。正常情况下门卫已经替你跳了；这个只在应用自己的回退逻辑里用。
