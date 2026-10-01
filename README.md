@@ -11,6 +11,9 @@
 | `X-User` | portal 用户名 |
 | `X-Role` | 该用户**在本站**的角色：`user` 或 `admin`（由 portal 的权限矩阵决定） |
 | `X-Portal-Sub` | 稳定主体标识（目前 = 用户名，预留） |
+| `X-Portal-Anon` | 值 `1`：允许匿名访问的站点上的**匿名访客**。与上面三个身份头**二选一**，门卫从不同时发送 |
+
+**身份的判定**：`X-User` 与 `X-Portal-Sub` **都非空**才算已登录（`X-Role` 缺省为 `user`）；缺任何一个都视为未认证。匿名访客（`X-Portal-Anon: 1`、无身份头）没有身份：`current_identity()` / `identity()` 返回 `None`/`null`，`require_identity` 照旧 401/拒绝，需要区分「匿名」和「没经过门卫」时用 `is_anonymous` / `isAnonymous`。万一两类头同时到达，**身份优先**（匿名为假）。机器/绕过路径两类头都没有。
 
 **安全前提**：这些头可信，仅因为应用容器**只有 Caddy 能访问**（compose 里没有 `ports:`，只挂 `ingress` 网络）。任何能绕过 Caddy 直连应用的路径都会让头伪造成为可能——不要给应用发布端口。
 
@@ -24,17 +27,17 @@
 
 ```bash
 # Python（Flask / FastAPI / Starlette）
-pip install "szyyw-auth @ git+https://github.com/Szyoo/szyyw-auth@v0.1.0#subdirectory=python"
+pip install "szyyw-auth @ git+https://github.com/Szyoo/szyyw-auth@v0.2.0#subdirectory=python"
 
 # JS（Express / Next）——用 codeload tarball，node:alpine 里没有 git
-npm i "https://codeload.github.com/Szyoo/szyyw-auth/tar.gz/refs/tags/v0.1.0"
+npm i "https://codeload.github.com/Szyoo/szyyw-auth/tar.gz/refs/tags/v0.2.0"
 ```
 
 ## 用法
 
 ```python
 # Flask
-from szyyw_auth.flask import current_identity, require_identity
+from szyyw_auth.flask import current_identity, require_identity, optional_identity, is_anonymous
 
 @app.get("/me")
 @require_identity()            # 401 没身份；require_identity("admin") 则非 admin 403
